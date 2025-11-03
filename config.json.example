@@ -1,0 +1,8 @@
+{
+    "sftp_host": "seu-servidor-sftp.com",
+    "sftp_port": 22,
+    "sftp_username": "seu_usuario",
+    "sftp_password": "sua_senha",
+    "sftp_remote_path": "/"
+}
+
