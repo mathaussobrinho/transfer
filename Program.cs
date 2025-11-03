@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TransferFilesApp.Services;
@@ -9,7 +8,7 @@ namespace TransferFilesApp
 {
     class Program
     {
-        private static FileWatcherService? _fileWatcherService;
+        private static ScheduledService? _scheduledService;
         private static CancellationTokenSource? _cancellationTokenSource;
 
         static async Task Main(string[] args)
@@ -21,10 +20,6 @@ namespace TransferFilesApp
 
             try
             {
-                // Criar pastas necessárias
-                DirectoryService.CreateDirectories();
-                Console.WriteLine("Pastas verificadas/criadas em C:\\Transfer");
-
                 // Carregar configuração
                 var config = ConfigurationService.LoadConfiguration();
                 
@@ -32,27 +27,42 @@ namespace TransferFilesApp
                 {
                     Console.WriteLine();
                     Console.WriteLine("ERRO: Configure as credenciais SFTP no arquivo config.json");
-                    Console.WriteLine("Local: C:\\Transfer\\config.json");
+                    Console.WriteLine("Local: C:\\Transfer\\NAO MECHER\\config.json");
                     Console.WriteLine();
                     Console.WriteLine("Pressione qualquer tecla para sair...");
                     Console.ReadKey();
                     return;
                 }
 
-                // Criar serviços
-                var sftpService = new SftpService(config);
-                
-                // Processar arquivos existentes
-                Console.WriteLine("Processando arquivos existentes na pasta 'A enviar'...");
-                await ProcessExistingFiles(sftpService);
+                // Verificar se é execução manual (com argumento)
+                if (args.Length > 0 && args[0].ToLower() == "manual")
+                {
+                    // Modo manual - executar imediatamente
+                    Console.WriteLine("=== MODO MANUAL - EXECUTANDO AGORA ===");
+                    Console.WriteLine();
+                    
+                    var sftpService = new SftpService(config);
+                    await FileProcessorService.ProcessAllFiles(sftpService);
+                    sftpService.Dispose();
+                    
+                    Console.WriteLine();
+                    Console.WriteLine("Processamento manual concluído!");
+                    Console.WriteLine("Pressione qualquer tecla para sair...");
+                    Console.ReadKey();
+                    return;
+                }
 
-                // Iniciar monitoramento
-                _cancellationTokenSource = new CancellationTokenSource();
-                _fileWatcherService = new FileWatcherService(sftpService, _cancellationTokenSource.Token);
-                _fileWatcherService.Start();
-
+                // Modo automático - agendar para 17h
+                Console.WriteLine("=== MODO AUTOMÁTICO - AGENDADO PARA 17:00 ===");
                 Console.WriteLine();
-                Console.WriteLine($"Monitorando pasta: C:\\Transfer\\A enviar");
+                
+                _scheduledService = new ScheduledService(config);
+                _scheduledService.Start();
+
+                Console.WriteLine("Serviço agendado iniciado.");
+                Console.WriteLine("O programa ficará rodando em segundo plano.");
+                Console.WriteLine("Envio automático acontecerá todos os dias às 17:00");
+                Console.WriteLine();
                 Console.WriteLine("Pressione Ctrl+C para parar...");
                 Console.WriteLine();
 
@@ -66,93 +76,9 @@ namespace TransferFilesApp
             }
             finally
             {
-                _fileWatcherService?.Stop();
-                _cancellationTokenSource?.Cancel();
+                _scheduledService?.Stop();
                 Console.WriteLine();
                 Console.WriteLine("Sistema encerrado");
-            }
-        }
-
-        private static async Task ProcessExistingFiles(SftpService sftpService)
-        {
-            var enviarDir = Path.Combine("C:\\Transfer", "A enviar");
-            
-            if (!Directory.Exists(enviarDir))
-                return;
-
-            var files = Directory.GetFiles(enviarDir);
-            foreach (var file in files)
-            {
-                // Ignorar arquivos temporários e ocultos
-                var fileName = Path.GetFileName(file);
-                if (fileName.StartsWith(".") || fileName.StartsWith("~"))
-                    continue;
-
-                await ProcessFile(file, sftpService);
-            }
-        }
-
-        private static async Task ProcessFile(string filePath, SftpService sftpService)
-        {
-            var fileName = Path.GetFileName(filePath);
-            LoggingService.LogInfo($"Processando arquivo: {fileName}");
-
-            try
-            {
-                // Enviar arquivo via SFTP
-                var success = await sftpService.UploadFileAsync(filePath);
-
-                // Mover arquivo para pasta Enviados
-                var enviadosDir = Path.Combine("C:\\Transfer", "Enviados");
-                var destinoPath = Path.Combine(enviadosDir, fileName);
-
-                // Se arquivo já existir, adicionar timestamp
-                if (File.Exists(destinoPath))
-                {
-                    var nomeSemExtensao = Path.GetFileNameWithoutExtension(fileName);
-                    var extensao = Path.GetExtension(fileName);
-                    var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                    destinoPath = Path.Combine(enviadosDir, $"{nomeSemExtensao}_{timestamp}{extensao}");
-                }
-
-                File.Move(filePath, destinoPath);
-
-                if (success)
-                {
-                    LoggingService.LogInfo($"Arquivo movido para Enviados: {Path.GetFileName(destinoPath)}");
-                }
-                else
-                {
-                    LoggingService.LogWarning($"Arquivo movido para Enviados (com erro): {Path.GetFileName(destinoPath)}");
-                    ErrorReportService.GenerateErrorReport(fileName, "Erro ao enviar arquivo via SFTP");
-                }
-            }
-            catch (Exception ex)
-            {
-                var errorMsg = $"Erro ao processar arquivo {fileName}: {ex.Message}";
-                LoggingService.LogError(errorMsg);
-
-                // Mover arquivo para Enviados mesmo com erro
-                try
-                {
-                    var enviadosDir = Path.Combine("C:\\Transfer", "Enviados");
-                    var destinoPath = Path.Combine(enviadosDir, fileName);
-
-                    if (File.Exists(destinoPath))
-                    {
-                        var nomeSemExtensao = Path.GetFileNameWithoutExtension(fileName);
-                        var extensao = Path.GetExtension(fileName);
-                        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                        destinoPath = Path.Combine(enviadosDir, $"{nomeSemExtensao}_{timestamp}{extensao}");
-                    }
-
-                    File.Move(filePath, destinoPath);
-                    ErrorReportService.GenerateErrorReport(fileName, ex.Message);
-                }
-                catch (Exception moveEx)
-                {
-                    LoggingService.LogError($"Erro ao mover arquivo após falha: {moveEx.Message}");
-                }
             }
         }
 
@@ -170,4 +96,3 @@ namespace TransferFilesApp
         }
     }
 }
-

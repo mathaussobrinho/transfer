@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Start</AssemblyName>
+    <RootNamespace>TransferFilesApp</RootNamespace>
+    <StartupObject>TransferFilesApp.StartManual</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SSH.NET" Version="2023.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="StartManual.cs" />
+    <Compile Include="Services\ConfigurationService.cs" />
+    <Compile Include="Services\FileProcessorService.cs" />
+    <Compile Include="Services\SftpService.cs" />
+    <Compile Include="Services\LoggingService.cs" />
+    <Compile Include="Services\ErrorReportService.cs" />
+    <Compile Include="Models\SftpConfig.cs" />
+  </ItemGroup>
+
+</Project>
+

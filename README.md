@@ -1,15 +1,19 @@
 # Sistema de Transferência de Arquivos via SFTP (C#)
 
-Sistema automatizado em C# para monitorar uma pasta local e enviar arquivos para um servidor SFTP.
+Sistema automatizado em C# para enviar arquivos para um servidor SFTP de forma agendada (17h) ou manual.
 
-## Funcionamento
+## Estrutura de Pastas
 
-O programa:
-1. Cria automaticamente as pastas necessárias em `C:\Transfer`
-2. Monitora a pasta `C:\Transfer\A enviar` por novos arquivos
-3. Envia os arquivos encontrados para o servidor SFTP configurado
-4. Move os arquivos (com sucesso ou erro) para `C:\Transfer\Enviados`
-5. Gera relatórios de erro na pasta `C:\Transfer` quando necessário
+Você deve criar manualmente a seguinte estrutura:
+
+```
+C:\Transfer\
+├── NAO MECHER\          # Pasta onde fica o programa
+│   ├── TransferFiles.exe    # Executável do serviço automático
+│   └── config.json          # Configurações SFTP
+├── A enviar\            # Coloque arquivos aqui para serem enviados
+└── Enviados\            # Arquivos movidos após envio
+```
 
 ## Requisitos
 
@@ -18,21 +22,38 @@ O programa:
 
 ## Instalação
 
-### 1. Restaurar dependências
+### 1. Compilar os executáveis
 
 ```bash
-dotnet restore
+compilar_tudo.bat
 ```
 
-### 2. Configurar credenciais SFTP
+Isso vai gerar dois executáveis:
+- **TransferFiles.exe** - Serviço automático (roda às 17h)
+- **Start.exe** - Botão manual para envio imediato
 
-Execute o programa uma vez para criar o arquivo `config.json`:
+### 2. Configurar estrutura de pastas
 
-```bash
-dotnet run
+Crie manualmente:
+- `C:\Transfer\NAO MECHER\`
+- `C:\Transfer\A enviar\`
+- `C:\Transfer\Enviados\`
+
+### 3. Copiar arquivos
+
+Copie os executáveis para:
+- `TransferFiles.exe` → `C:\Transfer\NAO MECHER\`
+- `Start.exe` → Área de trabalho (criar atalho)
+
+### 4. Configurar SFTP
+
+Execute `TransferFiles.exe` uma vez para criar o `config.json`:
+
+```
+C:\Transfer\NAO MECHER\TransferFiles.exe
 ```
 
-Depois edite o arquivo `C:\Transfer\config.json` com suas credenciais:
+Depois edite `C:\Transfer\NAO MECHER\config.json`:
 
 ```json
 {
@@ -44,143 +65,87 @@ Depois edite o arquivo `C:\Transfer\config.json` com suas credenciais:
 }
 ```
 
-### 3. Compilar o projeto
+### 5. Configurar início automático
 
-```bash
-dotnet build -c Release
-```
+Para o serviço rodar automaticamente:
 
-O executável será gerado em: `bin\Release\net6.0\TransferFiles.exe`
+1. Pressione `Win + R` e digite: `shell:startup`
+2. Crie um atalho para `C:\Transfer\NAO MECHER\TransferFiles.exe`
+
+Ou use o Agendador de Tarefas do Windows:
+1. Abra "Agendador de Tarefas"
+2. Crie nova tarefa:
+   - **Nome:** Transfer Files SFTP
+   - **Gatilho:** Ao iniciar o computador
+   - **Ação:** Iniciar programa
+   - **Programa:** `C:\Transfer\NAO MECHER\TransferFiles.exe`
 
 ## Uso
 
-### Executar manualmente:
+### Envio Automático (17h)
 
-**Opção 1 - Via dotnet run:**
-```bash
-dotnet run
-```
+O `TransferFiles.exe` roda em segundo plano e:
+- Verifica todos os dias às **17:00** se há arquivos para enviar
+- Se o computador estiver desligado às 17h, envia no dia seguinte às 17h
+- Processa todos os arquivos da pasta `A enviar` e move para `Enviados`
 
-**Opção 2 - Executar o executável compilado:**
-```bash
-.\bin\Release\net6.0\TransferFiles.exe
-```
+**Para iniciar o serviço:**
+- Execute `TransferFiles.exe` uma vez
+- Ele ficará rodando em segundo plano
 
-**Opção 3 - Duplo clique no arquivo:**
-```
-executar.bat
-```
+### Envio Manual (Botão Start)
 
-### Executar como serviço (Windows):
+O `Start.exe` permite enviar arquivos **imediatamente**, sem esperar as 17h:
 
-#### Opção 1: Usando Task Scheduler (Recomendado)
+1. Coloque o `Start.exe` na área de trabalho
+2. Clique duas vezes quando quiser enviar os arquivos manualmente
+3. O envio manual **não interfere** com o agendado às 17h
 
-1. Abra o "Agendador de Tarefas" (Task Scheduler)
-2. Crie uma nova tarefa:
-   - **Nome:** "Transfer Files SFTP"
-   - **Gatilho:** "Ao iniciar o computador" ou "Quando o usuário fizer logon"
-   - **Ação:** Iniciar programa
-   - **Programa:** `C:\caminho\para\TransferFiles.exe`
-   - **Diretório inicial:** `C:\caminho\para\projeto`
+## Funcionamento
 
-#### Opção 2: Atalho na pasta de Inicialização
-
-1. Pressione `Win + R`
-2. Digite `shell:startup`
-3. Crie um atalho para o executável `TransferFiles.exe`
-
-## Estrutura de Pastas
-
-```
-C:\Transfer\
-├── A enviar\          # Coloque arquivos aqui para serem enviados
-├── Enviados\          # Arquivos movidos após envio (sucesso ou erro)
-├── config.json        # Configurações do SFTP
-└── transfer_log_*.log # Logs do sistema
-```
-
-## Estrutura do Projeto
-
-```
-transfer/
-├── Program.cs                 # Ponto de entrada da aplicação
-├── Models/
-│   └── SftpConfig.cs         # Modelo de configuração SFTP
-├── Services/
-│   ├── DirectoryService.cs   # Gerenciamento de pastas
-│   ├── ConfigurationService.cs # Carregamento de configuração
-│   ├── SftpService.cs        # Cliente SFTP
-│   ├── FileWatcherService.cs # Monitoramento de arquivos
-│   ├── LoggingService.cs     # Sistema de logs
-│   └── ErrorReportService.cs # Geração de relatórios de erro
-├── TransferFiles.csproj      # Arquivo de projeto
-└── README.md                 # Este arquivo
-```
-
-## Recursos
-
-- ✅ Monitoramento automático em tempo real usando `FileSystemWatcher`
-- ✅ Processamento de arquivos existentes ao iniciar
-- ✅ Movimentação automática após envio
-- ✅ Relatórios de erro detalhados
-- ✅ Logs diários com timestamp
-- ✅ Proteção contra processamento duplicado
-- ✅ Tratamento de arquivos com mesmo nome (adiciona timestamp)
-- ✅ Detecção de arquivos em uso antes de processar
-- ✅ Conexão SFTP persistente e gerenciamento automático
+1. **Arquivos na pasta "A enviar"** são processados
+2. **Envio via SFTP** para o servidor configurado
+3. **Arquivos movidos** para "Enviados" (sucesso ou erro)
+4. **Relatórios de erro** gerados em `C:\Transfer\` quando necessário
 
 ## Logs e Relatórios
 
-- **Logs:** Arquivos `transfer_log_YYYYMMDD.log` na pasta `C:\Transfer\`
-- **Relatórios de Erro:** Arquivos `erro_YYYYMMDD_HHMMSS.txt` na pasta `C:\Transfer\`
-
-Os logs são escritos tanto no console quanto em arquivo, facilitando o acompanhamento.
+- **Logs:** `C:\Transfer\transfer_log_YYYYMMDD.log`
+- **Relatórios de Erro:** `C:\Transfer\erro_YYYYMMDD_HHMMSS.txt`
 
 ## Compilar como Executável Standalone
 
-Para criar um executável único que não precisa do .NET instalado:
+Para criar executáveis únicos (não precisam do .NET instalado):
 
 ```bash
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+dotnet publish TransferFiles.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+dotnet publish StartManual.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
-
-O executável será gerado em: `bin\Release\net6.0\win-x64\publish\TransferFiles.exe`
 
 ## Solução de Problemas
 
-### Erro: "dotnet não é reconhecido"
-- Instale o .NET 6.0 SDK ou superior
-- Verifique se o PATH do sistema inclui a pasta do .NET SDK
+### O envio automático não está funcionando
+- Verifique se `TransferFiles.exe` está rodando (Gerenciador de Tarefas)
+- Verifique os logs em `C:\Transfer\transfer_log_*.log`
+- Certifique-se de que o serviço está configurado para iniciar com Windows
 
-### Erro de conexão SFTP:
+### Arquivo não está sendo enviado
+- Verifique os logs
+- Confirme que o arquivo não está em uso
+- Use o botão `Start.exe` para tentar envio manual
+
+### Erro de conexão SFTP
 - Verifique as credenciais em `config.json`
 - Confirme que o servidor SFTP está acessível
-- Verifique firewall e porta (padrão: 22)
-
-### Arquivo não está sendo enviado:
-- Verifique os logs em `C:\Transfer\transfer_log_*.log`
-- Confirme que o arquivo não está em uso por outro programa
-- Verifique se o arquivo não está corrompido
-
-### Pastas não foram criadas:
-- Execute o programa com permissões de administrador
-- Verifique se a unidade C: está acessível
+- Verifique firewall e porta
 
 ## Dependências
 
 - **SSH.NET** (2023.0.1) - Cliente SFTP
-- **Newtonsoft.Json** (13.0.3) - Serialização JSON para configuração
+- **Newtonsoft.Json** (13.0.3) - Serialização JSON
 
 ## Notas de Segurança
 
 ⚠️ **Importante:** O arquivo `config.json` contém senhas em texto plano. Proteja este arquivo:
 - Não compartilhe o arquivo
 - Use permissões de arquivo adequadas
-- Considere usar variáveis de ambiente ou criptografia para produção
-
-## Diferenças da Versão Python
-
-- Executável nativo do Windows (não precisa Python instalado após compilação)
-- Melhor desempenho e uso de memória
-- Integração nativa com Windows
-- Compilável como executável standalone

@@ -5,13 +5,19 @@ namespace TransferFilesApp.Services
 {
     public static class ErrorReportService
     {
+        private static readonly string ReportDirectory = @"C:\Transfer";
+
         public static void GenerateErrorReport(string fileName, string error)
         {
             try
             {
-                var reportDirectory = @"C:\Transfer";
+                if (!Directory.Exists(ReportDirectory))
+                {
+                    Directory.CreateDirectory(ReportDirectory);
+                }
+
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                var reportPath = Path.Combine(reportDirectory, $"erro_{timestamp}.txt");
+                var reportPath = Path.Combine(ReportDirectory, $"erro_{timestamp}.txt");
 
                 var reportContent = new System.Text.StringBuilder();
                 reportContent.AppendLine("=".PadRight(50, '='));
@@ -35,4 +41,3 @@ namespace TransferFilesApp.Services
         }
     }
 }
-

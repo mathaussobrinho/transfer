@@ -33,6 +33,11 @@ namespace TransferFilesApp.Services
             {
                 try
                 {
+                    if (!Directory.Exists(LogDirectory))
+                    {
+                        Directory.CreateDirectory(LogDirectory);
+                    }
+
                     var logFileName = $"transfer_log_{DateTime.Now:yyyyMMdd}.log";
                     var logPath = Path.Combine(LogDirectory, logFileName);
                     var logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {level} - {message}{Environment.NewLine}";
@@ -47,4 +52,3 @@ namespace TransferFilesApp.Services
         }
     }
 }
-

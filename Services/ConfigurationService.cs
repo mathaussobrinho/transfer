@@ -7,7 +7,11 @@ namespace TransferFilesApp.Services
 {
     public static class ConfigurationService
     {
-        private static readonly string ConfigPath = @"C:\Transfer\config.json";
+        // Config está na mesma pasta do programa (NAO MECHER)
+        private static string ConfigPath => Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory,
+            "config.json"
+        );
 
         public static SftpConfig? LoadConfiguration()
         {
@@ -48,4 +52,3 @@ namespace TransferFilesApp.Services
         }
     }
 }
-
