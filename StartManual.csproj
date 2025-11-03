@@ -16,13 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="StartManual.cs" />
-    <Compile Include="Services\ConfigurationService.cs" />
-    <Compile Include="Services\FileProcessorService.cs" />
-    <Compile Include="Services\SftpService.cs" />
-    <Compile Include="Services\LoggingService.cs" />
-    <Compile Include="Services\ErrorReportService.cs" />
-    <Compile Include="Models\SftpConfig.cs" />
+    <Compile Remove="Program.cs" />
   </ItemGroup>
 
 </Project>
